@@ -1,7 +1,9 @@
 package GalioBot;
 
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -11,6 +13,10 @@ public final class RandomUtilities {
 	private RandomUtilities() {	}
 	
 	public static String decide(String[] args, int iterations) {
+		
+		if (args.length == 1) {
+			return "no u";
+		}
 		
 		Integer[] holder = new Integer[args.length];
 		for (int i = 0; i < args.length; i++) {
@@ -103,7 +109,7 @@ public final class RandomUtilities {
 	}
 	public static String getTarkovMap(int iterations) {
 		String maps[] = new String[] {
-				"Labs", "Customs", "Shoreline", "Interchange", "Woods", "Reserve", "Factory"
+				"Labs", "Customs", "Shoreline", "Interchange", "Reserve", "Factory"
 		};
 		int[] holder = new int[maps.length];
 		for (int i = 0; i < iterations; i++) {
@@ -151,4 +157,10 @@ public final class RandomUtilities {
 		return String.format("%d:%02d:%02d", diff.toSeconds() / 3600, (diff.toSeconds() % 3600) / 60, (diff.toSeconds() % 60));
 	}
 	
+	public static String getTimeStamp() {
+		SimpleDateFormat formatter= new SimpleDateFormat("yyyyMMddHHmmss");
+		Date date = new Date(System.currentTimeMillis());
+		
+		return formatter.format(date);
+	}
 }

@@ -11,14 +11,6 @@ public class ButtonHandler {
 	public void handleEvent(ButtonInteractEvent event) {
 		logButtonPush(event.getCustomId(), event.getInteraction().getUser().getTag());
 		matchMethod(event.getCustomId(), event.getInteraction().getUser().getTag(), event);
-		/*
-		event.getInteraction().getCommandInteraction().getCustomId().ifPresent(value -> {
-			matchMethod(value, event.getInteraction().getUser().getTag(), event);
-			logButtonPush(value, event.getInteraction().getUser().getTag());
-			russianRoulette(value);
-			//findMethod(value);
-		});
-		*/
 	}
 	
 	private void logButtonPush(String buttonid, String user) {
@@ -38,12 +30,7 @@ public class ButtonHandler {
 	*/
 	
 	private void matchMethod(String value, String user, ButtonInteractEvent event) {
-		if (RussianRoulette.commands.contains(value)) {
-			if (!RussianRoulette.isInit()) {
-				RussianRoulette.init(event);
-			}
-			RussianRoulette.parseInput(value, user, event);
-		} else if (VoteKick.commands.contains(value)) {
+		if (VoteKick.commands.contains(value)) {
 			VoteKick.parse(event);
 		}
 			else {

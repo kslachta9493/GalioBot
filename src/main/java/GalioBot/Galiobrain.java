@@ -2,7 +2,6 @@ package GalioBot;
 
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -17,6 +16,7 @@ import discord4j.core.event.domain.interaction.ButtonInteractEvent;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.User;
+import discord4j.core.object.entity.channel.TextChannel;
 
 
 
@@ -24,10 +24,8 @@ public class Galiobrain {
 	private final Map<String, Command> commands = new HashMap<>();
 	private GatewayDiscordClient client;
 	private Channels channels;
-	private Movement move;
 	private String newname = null;
 	private BotUtilities bot;
-	private MyScheduler scheduler;
 	private Logger log;
 	public static void main (String args[]) {
 			new Galiobrain();
@@ -38,7 +36,7 @@ public class Galiobrain {
 		SetupCommands();
 
 		ButtonHandler btnHandler = new ButtonHandler(log);
-		client = DiscordClientBuilder.create("")
+		client = DiscordClientBuilder.create("MjQwMjQ2ODM1OTAwMzE3Njk2.WA6RTQ.uxBNh6ewAGkiXeKsH20TqN9g4mE")
                 .build()
                 .login()
                 .block();
@@ -50,19 +48,27 @@ public class Galiobrain {
         });
         
         //check if event comes from private message sent to console
+        //add check if they are in voicechannel
         client.getEventDispatcher().on(MessageCreateEvent.class)
         .subscribe(event -> {
-            final String content = event.getMessage().getContent();
-            for (final Map.Entry<String, Command> entry : commands.entrySet()) {
-                if (content.split(" ")[0].equalsIgnoreCase('!' + entry.getKey())) {
-                    entry.getValue().execute(event);
-                    if (!content.startsWith("!delete")) {
-                    	bot.addMessage(event);
-                    }              
-                    break;
+        	event.getMessage().getChannel().ofType(TextChannel.class).doOnNext(test -> {
+                final String content = event.getMessage().getContent();
+                for (final Map.Entry<String, Command> entry : commands.entrySet()) {
+                    if (content.split(" ")[0].equalsIgnoreCase('!' + entry.getKey())) {
+                        entry.getValue().execute(event);
+                        if (!content.startsWith("!delete")) {
+                        	bot.addMessage(event);
+                        }              
+                        break;
+                    }
                 }
-            }
-            //bot.log(event);
+        	}).subscribe();
+        	//seperate linkchecker into own class
+        	
+        	if (!event.getMessage().getData().attachments().toString().equals("[]")) {
+        		Download.downloadImage(event.getMessage().getData().attachments());
+        	}
+        	ContentDisplay.checkForDownload(event.getMessage().getContent(), event);
             log.logText(event);
         });
         
@@ -81,13 +87,11 @@ public class Galiobrain {
         
         bot.setClient(client);
 		channels = new Channels(client);
-		move = new Movement();
         client.onDisconnect().block();
 	}
 
 	private void setupScheduler() {
-        scheduler = new MyScheduler(client);
-        Delete deleter = new Delete();
+		MyScheduler scheduler = new MyScheduler(client);
         Timer t=new Timer();
 
         Duration today = Duration.ofMillis(System.currentTimeMillis());
@@ -107,7 +111,6 @@ public class Galiobrain {
         System.out.println(diff.toSeconds());
         
         t.scheduleAtFixedRate(scheduler, diff.getSeconds()*1000,1000*60*60*24);
-        t.scheduleAtFixedRate(deleter,  diff.getSeconds()*1000,1000*60*60*24);
 	}
 	public void SetupCommands() {
 		String comms[] = new String[] { "brando", "dallen", "jamie", "jose", 
@@ -119,7 +122,7 @@ public class Galiobrain {
 			});
 		}
 	    commands.put("decide", event -> {
-	    	bot.sendMessage(event, decide(event));
+	    	bot.sendMessage(event, RandomUtilities.decide(bot.parseArgs(event), 10000));
 	    });
 	    commands.put("day", event -> {
 	    	setChannel(event);
@@ -128,49 +131,31 @@ public class Galiobrain {
 	    	bot.sendMessage(event, "" + RandomUtilities.roll(RandomUtilities.parseForInt(event)));
 	    });
 	    commands.put("help", event -> {
-	    	bot.sendMessage(event, decide(event));
+	    	event.getMessage().getChannel().subscribe( chan -> {
+	    		bot.sendCommandList(chan, commands);
+	    	});
 	    });
 	    commands.put("delete",  event -> {
 	    	bot.cleanMessages(event, "Cleaned Messages");
-	    });
-	    commands.put("add", event -> {
-	    	bot.sendMessageDelay(event, addCommand(event));
 	    });
 	    commands.put("yolo", event -> {
 	    	//randomChannels(event);
 	    	bot.sendMessage(event, "Yolo is currently disabled");
 	    });
-	    commands.put("return", event -> {
-	    	returnChannelUser(event);
-	    });
+
 	    commands.put("dolo", event -> {
 	    	bot.sendMessage(event, "dolo yourself bitch");
 	    	//doloUser(event);
 	    });
-	    commands.put("test", event -> {
-	    	bot.sendButtonMessage(event, "Test", "test", "Try this Button Below");
-	    });
-	    commands.put("test2", event -> {
-	    	bot.sendButtonMessage(event, "Test2", "test2", "Try this Button Below");
-	    });
-	    commands.put("tarkov", event -> {
-	    	bot.sendMessageDelay(event, RandomUtilities.getTarkovMap(10000));
-	    });
-	    /*
 	    commands.put("tarkov", event -> {
 	    	event.getMessage().getChannel().subscribe( chan -> {
-	    		Tarkov.sendTarkovRandom(chan, parseArgs(event));
+	    		Tarkov.sendTarkovRandom(chan, bot.parseArgs(event));
 	    	});
 	    });
-	    */
-	    commands.put("galio", event -> {
-	    	bot.sendMessage(event, RandomUtilities.getTarkovMap(10000));
-	    });
-	    commands.put("yar", event -> {
-	    	bot.sendJohnBitch(event, "Stop pushing my buttons");
-	    });
-	    commands.put("rr", event -> {
-	    	bot.sendButtonTest(event);
+	    commands.put("gear", event -> {
+	    	event.getMessage().getChannel().subscribe( chan -> {
+	    		Tarkov.sendRandomTarkovGear(chan, bot.parseArgs(event));
+	    	});
 	    });
 	    commands.put("join", event -> {
 	    	bot.join(event);
@@ -197,16 +182,7 @@ public class Galiobrain {
 	    	});
 	    });
 	}
-	
-	private String[] parseArgs(MessageCreateEvent event) {
-		return event.getMessage().getContent().split(" ");
-	}
-	
-	private void returnChannelUser(MessageCreateEvent event) {
-		move.returnChannelUser(event);
-		bot.sendMessage(event, "Returning users");
-	}
-
+		
 	public void setChannel(MessageCreateEvent event) {
 		
 		if (!channels.isReady()) {
@@ -226,52 +202,5 @@ public class Galiobrain {
 		
 		bot.sendMessageDelay(event, "Changing Channel Name to: " + newname);
 		bot.changeChannelName(event, newname);
-	}
-
-	public String addCommand(MessageCreateEvent events) {
-		String[] args = events.getMessage().getContent().split(" ");
-		String output = "Commands Added:";
-		if (args.length == 1) {
-			return "no u";
-			
-		} else {
-			
-			for (int i = 1; i < args.length; i++) {
-				if (commands.containsKey(args[i])) {
-					bot.sendBotMessage(events, (args[i]+ " already exists"), 5);
-				} else {
-					commands.put(args[i], event -> {
-						bot.sendMessageDelay(event, RandomUtilities.getNameMeme(events));
-					});
-					output = output + " " + args[i];
-				}
-			}
-		}
-
-		return output;
-	}
-
-	public String help() {
-		String output = ">>> **Commands Available\n**";
-		String comlist[] = new String[30];
-		int count = 0;
-        for (final Map.Entry<String, Command> entry : commands.entrySet()) {
-        		comlist[count] = entry.getKey();
-        		count++;
-        }
-        Arrays.sort(comlist, 0, count);
-        for (int i = 0; i < count; i++) {
-    		output = output + "!" + comlist[i] + "\n";
-        }
-		return output;
-	}
-
-	private String decide(MessageCreateEvent event) {
-		String[] args = event.getMessage().getContent().split(" ");
-		if (args.length == 1) {
-			return "no u";
-		} else {
-			return RandomUtilities.decide(args, 10000);
-		}
 	}
 }

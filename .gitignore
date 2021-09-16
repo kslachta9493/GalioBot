@@ -3,3 +3,11 @@
 
 # Ignore Gradle build output directory
 build
+
+# Ignored Files
+
+textLog.txt
+textLogOld.txt
+voiceLog.txt
+images/
+downloads/

@@ -1,9 +1,12 @@
 package GalioBot;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import discord4j.common.util.Snowflake;
@@ -15,8 +18,10 @@ import discord4j.core.object.component.Button;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.channel.Channel;
+import discord4j.core.object.entity.channel.MessageChannel;
 import discord4j.core.object.entity.channel.VoiceChannel;
 import discord4j.core.object.reaction.ReactionEmoji;
+import discord4j.rest.util.Color;
 import reactor.core.publisher.Mono;
 
 public class BotUtilities {
@@ -123,70 +128,28 @@ public class BotUtilities {
                              Button.primary("3", "3"),
                              Button.primary("4", "4"),
                              Button.primary("5", ReactionEmoji.codepoints("U+1F44C"))
-                     ),
-                     ActionRow.of(
-                             Button.primary("6", "6"),
-                             Button.primary("7", "7"),
-                             Button.primary("8", "8"),
-                             Button.primary("9", "9"),
-                             Button.primary("10", "10")
-                     ),
-                     ActionRow.of(
-                             Button.primary("11", "11"),
-                             Button.primary("12", "12"),
-                             Button.primary("13", "13"),
-                             Button.primary("14", "14"),
-                             Button.primary("15", "15")
-                     ),
-                     ActionRow.of(
-                             Button.primary("16", "16"),
-                             Button.primary("17", "17"),
-                             Button.primary("18", "18"),
-                             Button.primary("19", "19"),
-                             Button.primary("20", "20")
-                     ),
-                     ActionRow.of(
-                             Button.primary("21", "21"),
-                             Button.primary("22", "22"),
-                             Button.primary("23", "23"),
-                             Button.primary("24", "24"),
-                             Button.primary("25", "25")
                      )
 					);
 		}))
 		.map(message -> messageset.add(message))
 		.subscribe();
 	}
-	public void sendButtonTest(MessageCreateEvent event) {
-		event.getMessage().getChannel()
-		.flatMap(channel -> channel.createMessage(msg -> {
-			msg.setContent("Test Button");
-			msg.setComponents(
-					 ActionRow.of(
-                             //              ID,  label
-                             Button.primary("join", "Join"),
-                             Button.primary("start", "Start Game")
-                             //ReactionEmoji.codepoints("U+1F52B squirt gun
-                     )
-					);
-		}))
-		.map(message -> message.getId())
-		.map(RussianRoulette::sendId)
-		.subscribe();
-	}
 	
 	public void join(MessageCreateEvent event) {
-
+		//add check to make sure user is connected to voice channel first
 		Mono.justOrEmpty(event.getMember())
 			    .flatMap(Member::getVoiceState)
 			    .flatMap(VoiceState::getChannel)
 			    .flatMap(channel -> channel.join(spec -> spec.setProvider(null)))
 			    .subscribe();	
-
 	}
 	
 	public void leave(MessageCreateEvent event) {
-		Mono.justOrEmpty(event);
+		//check if bot is connected
+		//disconnect after certain amount of time?
+		event.getClient().getMemberById(Snowflake.of("165202988795691008"), Snowflake.of("165202988795691008")).flatMap(member -> member.edit(usr -> usr.setNewVoiceChannel(null))).subscribe(null, error -> {
+			System.out.println("Bot Disconnect Error");
+		});
 	}
 	
 	public void sendVoteButton(MessageCreateEvent event) {
@@ -203,5 +166,31 @@ public class BotUtilities {
 					);
 		}))
 		.subscribe();
+	}
+	
+	public void sendCommandList(MessageChannel chan, Map<String, Command> commands) {
+		
+		String output = "";
+		String comlist[] = new String[30];
+		int count = 0;
+        for (final Map.Entry<String, Command> entry : commands.entrySet()) {
+        		comlist[count] = entry.getKey();
+        		count++;
+        }
+        Arrays.sort(comlist, 0, count);
+        for (int i = 0; i < count; i++) {
+    		output = output + "!" + comlist[i] + "\n";
+        }
+        final String temp = output;
+		chan.createEmbed(spec -> 
+		  spec.setColor(Color.BLACK)
+		    .setTitle("GalioBot")
+		    .addField("Commands", temp, true)
+		    .setTimestamp(Instant.now())
+		).subscribe();
+	}
+	
+	public String[] parseArgs(MessageCreateEvent event) {
+		return event.getMessage().getContent().split(" ");
 	}
 }
